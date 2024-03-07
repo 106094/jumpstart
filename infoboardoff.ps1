@@ -1,14 +1,18 @@
-﻿Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force;
+﻿$checkconcom=get-content C:\Jumpstart\Tag\Productline.log
+
+if($checkconcom -match "con"){
+
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force;
 
 Stop-Process -Name "InfoBoard" -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 5
 $dir00=(ls C:\Users\$env:Username\AppData\Roaming\NEC *InfoBoard* -Recurse -Directory).FullName
 $dir01=(ls C:\Users\$env:Username\AppData\Local *InfoBoard* -Recurse -Directory).FullName
-$dir1=(ls "C:\Program Files\WindowsApps\*"  *InfoBoard* -Recurse -Directory).FullName
+$dir1=(ls "C:\Program Files\WindowsApps\*"  *InfoBoard* -Recurse -Directory|Select-Object -Last 1).FullName
 $dirapp=$dir1+"\infoboard.exe"
 
-if($dir1.length -gt 0 -or $dir01.length -gt 0)
-{start-process "$dirapp"
+if($dir1.length -gt 0 -or $dir01.length -gt 0){
+start-process "$dirapp"
 start-sleep -s 10
 Stop-Process -Name "InfoBoard" -ErrorAction SilentlyContinue
 start-sleep -s 2
@@ -26,11 +30,14 @@ start-sleep -s 2
  
 
 start-sleep -s 5
-start-process "$dirapp"
+
+$appid=(Get-StartApps|Where-object{$_.APPID -match "InfoBoard"  }).appid
+Start-Process "explorer.exe" "shell:appsfolder\$appId"
+Write-Host "open infoboard with new settings"
 start-sleep -s 10
 
 }
 else{
-echo "no Infoboard Installed"}
-
-exit
+echo "no Infoboard Installed"
+}
+}

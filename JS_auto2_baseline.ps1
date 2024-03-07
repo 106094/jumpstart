@@ -5,12 +5,12 @@
 
 $wshell = New-Object -ComObject Wscript.shell
 $shell=New-Object -ComObject shell.application
-$mySI= (get-Process cmd -ErrorAction SilentlyContinue|sort StartTime -ea SilentlyContinue |select -first 1).SI
-$checkcmd=((get-process cmd*  -ErrorAction SilentlyContinue)|?{$_.SI -eq $mySI}).HandleCount.count
-$checkwinscp=((get-process winscp*)|?{$_.SI -eq $mySI}).HandleCount.count
+$mySI= (get-Process cmd -ErrorAction SilentlyContinue|Sort-Object StartTime -ea SilentlyContinue |Select-Object -first 1).SI
+$checkcmd=((get-process cmd*  -ErrorAction SilentlyContinue)|Where-Object{$_.SI -eq $mySI}).HandleCount.count
+$checkwinscp=((get-process winscp*)|Where-Object{$_.SI -eq $mySI}).HandleCount.count
 $winv= ([System.Environment]::OSVersion.Version).Build
 
-$pshid0= (Get-Process Powershell |sort StartTime -ea SilentlyContinue |select -last 1).id
+$pshid0= (Get-Process Powershell |Sort-Object StartTime -ea SilentlyContinue |Select-Object -last 1).id
 
 function Set-WindowState {
 	<#
@@ -78,7 +78,7 @@ public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 }
 ##
 if((get-process "cmd" -ea SilentlyContinue) -ne $Null){ 
-$lastid=  (Get-Process cmd |?{$_.SI -eq $mySI}|sort StartTime -ea SilentlyContinue |select -last 1).id
+$lastid=  (Get-Process cmd |Where-Object{$_.SI -eq $mySI}|sort-object StartTime -ea SilentlyContinue |select-object -last 1).id
  Get-Process -id $lastid  | Set-WindowState -State MINIMIZE
 }
 ##>
@@ -186,12 +186,12 @@ do{
 
 start-sleep -s 30
 
-$pshid=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort StartTime |select -first 1).id |?{$_ -notmatch $pshid0}
+$pshid=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort-object StartTime |select-object -first 1).id |Where-Object{$_ -notmatch $pshid0}
 
 
 start-sleep -s 30
 
-$pshid2=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort StartTime |select -first 1).id |?{$_ -notmatch $pshid0}
+$pshid2=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort-object StartTime |select-object -first 1).id |Where-Object{$_ -notmatch $pshid0}
 
 
 }until($pshid -ne $null -and $pshid2 -ne $null -and $pshid -eq $pshid2)
@@ -316,9 +316,9 @@ if($content -match "current\: OEM"){
 New-Item -Name TempResult -Force -ItemType directory -Path C:\Jumpstart\batch\ |out-null
 
 ########### initialize the baseline needed testitems  ########
-$result_csv=(gci -path C:\Jumpstart\performance\results\OEM_*results.csv|select -Last 1).fullname
+$result_csv=(get-childitem -path C:\Jumpstart\performance\results\OEM_*results.csv|select-object -Last 1).fullname
 $result_content=import-csv $result_csv -Encoding UTF8
-$result_items=$result_content.assessment|sort|Get-Unique
+$result_items=$result_content.assessment|Sort-Object|Get-Unique
 
 if($winv -ge 22000){
 #$testitems=@("FastStartup","Standby","Edge","BatteryLife")
@@ -341,8 +341,8 @@ foreach($testitem in $testitems){
    $setvaluefile=$testitem+"_baseline_value.txt" 
 
 if($testitem -eq "FastStartup" -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."metricvalue"| measure -Minimum).Minimum
-$item_status=($result_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."metricvalue"| Measure-Object -Minimum).Minimum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."metricvalue" -eq $item_value}).status
 $ini_check = test-path C:\Jumpstart\batch\$setfile
 
 if($item_status -ne "Pass" -and $ini_check -eq $false){
@@ -353,8 +353,8 @@ if($item_status -ne "Pass" -and $ini_check -eq $false){
 
 
 if($testitem -eq "BatteryLife"  -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem})."metricvalue"| measure -Maximum).Maximum
-$item_status=($result_content|? {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem})."metricvalue"| Measure-Object -Maximum).Maximum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
 
 #####
 $ini_check = test-path C:\Jumpstart\batch\$setfile
@@ -367,8 +367,8 @@ if($item_status -ne "Pass" -and $ini_check -eq $false){
 
 
 if(($testitem -eq "Edge"-or $testitem -eq "Standby")  -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem})."metricvalue" | measure -Minimum).Minimum
-$item_status=($result_content|? {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem})."metricvalue" | Measure-Object -Minimum).Minimum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
 
 $ini_check = test-path C:\Jumpstart\batch\$setfile
 
@@ -406,11 +406,11 @@ $wshell.SendKeys("~")
 
 if($content -match "current\: Baseline"){
 
-$result_csv=(gci -path C:\Jumpstart\performance\results\OEM_*results.csv|select -Last 1).fullname
+$result_csv=(get-childitem -path C:\Jumpstart\performance\results\OEM_*results.csv|select-object -Last 1).fullname
 $result_content=import-csv $result_csv -Encoding UTF8
-$oem_result_paths=$result_content.xmlpath|%{($_.split("\"))[-2]}|sort|Get-Unique
+$oem_result_paths=$result_content.xmlpath|ForEach-Object{($_.split("\"))[-2]}|Sort-Object|Get-Unique
 
-gci -path C:\Jumpstart\performance\results\JobResults* | %{
+get-childitem -path C:\Jumpstart\performance\results\JobResults* | ForEach-Object{
 
 $axe=$_.fullname+"\AxeLog.txt"
 $bl_folder_content=get-content -path $axe
@@ -419,9 +419,9 @@ $_.fullname
 $lastesetfolder=$lastesetfolder+@($_.fullname)
 }
 }
-$latest_bl= $lastesetfolder|Sort-Object|select -last 1
+$latest_bl= $lastesetfolder|Sort-Object|select-object -last 1
 
-gci -path C:\Jumpstart\performance\results\JobResults* | %{
+get-childitem -path C:\Jumpstart\performance\results\JobResults* | ForEach-Object{
 
 
 if($_.name -notin $oem_result_paths -and $latest_bl -notmatch $_.name ){
@@ -559,9 +559,9 @@ $wshell.SendKeys("~")
 start-sleep -s 5
 
 ###########check the baseline needed testitems  ########
-$result_csv=(gci -path C:\Jumpstart\performance\results\Baseline_*results.csv|select -Last 1).fullname
+$result_csv=(get-childitem -path C:\Jumpstart\performance\results\Baseline_*results.csv|select-object -Last 1).fullname
 $result_content=import-csv $result_csv -Encoding UTF8
-$result_items=$result_content.assessment|sort|Get-Unique
+$result_items=$result_content.assessment|Sort-Object|Get-Unique
 
 
 if($winv -ge 22000){
@@ -587,13 +587,13 @@ $setvaluefile=$testitem+"_baseline_value.txt"
  if  ($retestpath -eq $true){
 
 if($testitem -eq "FastStartup" -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."metricvalue"| measure -Minimum).Minimum
-$item_status=($result_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."metricvalue"| Measure-Object -Minimum).Minimum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."metricvalue" -eq $item_value}).status
 
 $ini_check = test-path C:\Jumpstart\batch\$setfile
 if ($ini_check -eq $true){$bl_count=get-content C:\Jumpstart\batch\$setfile}
 
-$bl_value=(get-content -Path (gci C:\Jumpstart\batch\TempResult\tempResult*|select -last 1).fullname)
+$bl_value=(get-content -Path (get-childitem C:\Jumpstart\batch\TempResult\tempResult*|select-object -last 1).fullname)
 
 foreach ($bll in $bl_value){
 if($bll -match $testitem -and $bll -match "Total" ){$linec=$bl_value.indexof($bll) 
@@ -601,7 +601,7 @@ break}
 }
 
 
-$valuea=($bl_value[$linec]).split(" ")|%{
+$valuea=($bl_value[$linec]).split(" ")|foreach-object{
 if($_ -match "\d{1,}\.\d{1,}"){
 $valueX=$_
 }
@@ -610,7 +610,7 @@ $valueX=$_
   add-content -path C:\Jumpstart\batch\$setvaluefile -value $valueX
 
 $newv= ("""1"",""2"",""3"",""4"",""5""") 
- $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|%{
+ $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|ForEach-Object{
  $newv=$newv+"`n"+$_
  }
 
@@ -634,18 +634,18 @@ Remove-Item C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Repo
 
 
 if($testitem -eq "BatteryLife"  -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem})."metricvalue"| measure -Maximum).Maximum
-$item_status=($result_content|? {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem})."metricvalue"| Measure-Object -Maximum).Maximum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
 
 $ini_check = test-path C:\Jumpstart\batch\$setfile
 if ($ini_check -eq $true){$bl_count=get-content C:\Jumpstart\batch\$setfile }
 
-$bl_value=(get-content -Path (gci C:\Jumpstart\batch\TempResult\tempResult*|select -last 1).fullname)
+$bl_value=(get-content -Path (get-childitem C:\Jumpstart\batch\TempResult\tempResult*|select-object -last 1).fullname)
 foreach ($bll in $bl_value){
 if($bll -match $testitem -and $bll -match "FullDrain" ){$linec=$bl_value.indexof($bll)
 break}
 }
-$valuea=($bl_value[$linec]).split(" ")|%{
+$valuea=($bl_value[$linec]).split(" ")|ForEach-Object{
 if($_ -match "\d{3,}"){
 $valueX=$_
 }
@@ -654,7 +654,7 @@ $valueX=$_
   add-content -path C:\Jumpstart\batch\$setvaluefile -value $valueX
 
 $newv= ("""1"",""2"",""3"",""4"",""5""") 
- $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|%{
+ $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|ForEach-Object{
  $newv=$newv+"`n"+$_
  }
 
@@ -677,18 +677,18 @@ Remove-Item C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Repo
 }
 
 if(($testitem -eq "Edge"-or $testitem -eq "Standby")  -and $result_items -like "*$testitem*"){
-$item_value=(($result_content|? {$_."assessment" -eq $testitem})."metricvalue" | measure -Minimum).Minimum
-$item_status=($result_content|? {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
+$item_value=(($result_content|Where-Object {$_."assessment" -eq $testitem})."metricvalue" | Measure-Object -Minimum).Minimum
+$item_status=($result_content|Where-Object {$_."assessment" -eq $testitem  -and $_."metricvalue" -eq $item_value}).status
 
 $ini_check = test-path C:\Jumpstart\batch\$setfile
 if ($ini_check -eq $true){$bl_count=get-content C:\Jumpstart\batch\$setfile }
 
-$bl_value=(get-content -Path (gci C:\Jumpstart\batch\TempResult\tempResult*|select -last 1).fullname)
+$bl_value=(get-content -Path (get-childitem C:\Jumpstart\batch\TempResult\tempResult*|select-object -last 1).fullname)
 foreach ($bll in $bl_value){
 if($bll -match $testitem -and ($bll -match "Total" -or $bll -match "LargestContentfulPaint") ){$linec=$bl_value.indexof($bll)
 break}
 }
-$valuea=($bl_value[$linec]).split(" ")|%{
+$valuea=($bl_value[$linec]).split(" ")|ForEach-Object{
 if($_ -match "\d{1,}\.\d{1,}"){
 $valueX=$_
 }
@@ -697,7 +697,7 @@ $valueX=$_
   add-content -path C:\Jumpstart\batch\$setvaluefile -value $valueX
 
 $newv= ("""1"",""2"",""3"",""4"",""5""") 
- $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|%{
+ $va1=get-content "C:\Jumpstart\performance\results\Performance_Assessment_Toolkit_Reporting_Template.csv"|ForEach-Object{
  $newv=$newv+"`n"+$_
  }
 
@@ -752,7 +752,7 @@ $ini="ok"
 }
 
 
-$testcheck=(gci "C:\Jumpstart\batch\*baseline.txt").count 
+$testcheck=(get-childitem "C:\Jumpstart\batch\*baseline.txt").count 
 
 if($testcheck -eq 0){
 
@@ -771,8 +771,10 @@ move-item  C:\Jumpstart\batch\TempResult\JobResults* C:\Jumpstart\performance\re
  remove-item C:\Jumpstart\batch\wait_pswindow.txt -Force
 
  Get-Process -id $pshid2 | Set-WindowState -State MINIMIZE
- [System.Windows.Forms.MessageBox]::Show($this,"Baseline Test Complete!")
- exit
+ #[System.Windows.Forms.MessageBox]::Show($this,"Baseline Test Complete!")
+  #exit
+   ######  Report generate #####
+   invoke-expression -Command C:\Jumpstart\batch\get_report.ps1
 
 }
 }
@@ -792,7 +794,7 @@ exit
 #################################Check Enviroment settings ####################################################
 
 
-$testcheck=(gci "C:\Jumpstart\batch\*baseline.txt").count 
+$testcheck=(get-childitem "C:\Jumpstart\batch\*baseline.txt").count 
        
 if ( $ini -eq "ok" -and $testcheck -ne 0){
 
@@ -961,14 +963,13 @@ Start-Sleep -s 5
 
 ################################# start baseline test and record test rounds ####################################################
 
-
-$testcheck=(gci "C:\Jumpstart\batch\*baseline.txt").count
+$testcheck=(get-childitem "C:\Jumpstart\batch\*baseline.txt").count
 
 if($testcheck -gt 0){
 
 $testitems2=@("FastStartup_baseline.txt","Standby_baseline.txt","Edge_baseline.txt","BatteryLife_baseline.txt")
 
-(gci "C:\Jumpstart\batch\*baseline.txt").name| sort{$testitems2.IndexOf($_)} |%{
+(get-childitem "C:\Jumpstart\batch\*baseline.txt").name|Sort-Object{$testitems2.IndexOf($_)} |ForEach-Object{
 $testgo=$_
 $itemfile="C:\Jumpstart\batch\$_"
 $testcount=get-content -path $itemfile

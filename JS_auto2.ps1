@@ -1,20 +1,23 @@
 ﻿Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Bypass -Force;
- $checkdouble=(get-process cmd*).HandleCount.count
+ #$checkdouble=(get-process cmd*).HandleCount.count
   Add-Type -AssemblyName Microsoft.VisualBasic
   Add-Type -AssemblyName System.Windows.Forms
 
 $wshell = New-Object -ComObject Wscript.shell
 $shell=New-Object -ComObject shell.application
-$mySI= (get-Process cmd -ErrorAction SilentlyContinue|sort StartTime -ea SilentlyContinue |select -first 1).SI
-$checkcmd=((get-process cmd*  -ErrorAction SilentlyContinue)|?{$_.SI -eq $mySI}).HandleCount.count
+$mySI= (get-Process cmd -ErrorAction SilentlyContinue|sort-object StartTime -ea SilentlyContinue |select-object -first 1).SI
+#$checkcmd=((get-process cmd*  -ErrorAction SilentlyContinue)|where-object{$_.SI -eq $mySI}).HandleCount.count
 $winv= ([System.Environment]::OSVersion.Version).Build
-$testWin10=test-path C:\Jumpstart\performance\Win10\
-$testWin11=test-path C:\Jumpstart\performance\Win11\
+#$testWin10=test-path C:\Jumpstart\performance\Win10\
+#$testWin11=test-path C:\Jumpstart\performance\Win11\
+$testfolder=test-path "C:\Jumpstart\performance\results\"
 
-if($testWin10 -eq $true -and $testWin11 -eq  $true ){
- if($winv -ge 22000){$A1= (gci -path C:\Jumpstart\performance\Win11\*.zip).fullname }
- else{$A1= (gci -path C:\Jumpstart\performance\Win10\*.zip).fullname }
- echo "waiting 1～3 min for file extracting "
+##### copy JS tool to local path ####
+
+if(!$testfolder){
+ if($winv -ge 22000){$A1= (get-childitem -path C:\Jumpstart\performance\Win11\*.zip).fullname }
+ else{$A1= (get-childitem -path C:\Jumpstart\performance\Win10\*.zip).fullname }
+ write-output "waiting 1～3 min for JS tool file extracting to local path"
   #Expand-Archive -LiteralPath $A1  -DestinationPath C:\Jumpstart\performance\
    $shell.NameSpace("C:\Jumpstart\performance\").copyhere($shell.NameSpace($A1).Items(),4)
 
@@ -24,8 +27,8 @@ if($testWin10 -eq $true -and $testWin11 -eq  $true ){
   }until($test_ass -eq $true)
   start-sleep -s 30
 
-  remove-item C:\Jumpstart\performance\Win10 -Recurse -Force
-   remove-item C:\Jumpstart\performance\Win11 -Recurse -Force
+  remove-item C:\Jumpstart\performance\Win10 -Recurse -Force -ea SilentlyContinue
+   remove-item C:\Jumpstart\performance\Win11 -Recurse -Force -ea SilentlyContinue
 
 $action = New-ScheduledTaskAction -Execute "C:\Jumpstart\batch\JS_auto2.bat" 
 $etime=(Get-Date).AddMinutes(2)
@@ -39,7 +42,7 @@ Register-ScheduledTask -Action $action -Trigger $trigger -Settings $Stset -Force
 
 }
 
-$pshid0= (Get-Process Powershell |sort StartTime -ea SilentlyContinue |select -last 1).id
+$pshid0= (Get-Process Powershell |sort-object StartTime -ea SilentlyContinue |select-object -last 1).id
 
 function Set-WindowState {
 	<#
@@ -106,8 +109,8 @@ public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 	}
 }
 ##
-if((get-process "cmd" -ea SilentlyContinue) -ne $Null){ 
-$lastid=  (Get-Process cmd |?{$_.SI -eq $mySI}|sort StartTime -ea SilentlyContinue |select -last 1).id
+if((get-process "cmd" -ea SilentlyContinue)){ 
+$lastid=  (Get-Process cmd |where-object{$_.SI -eq $mySI}|sort-object StartTime -ea SilentlyContinue |select-object -last 1).id
  Get-Process -id $lastid  | Set-WindowState -State MINIMIZE
 }
 ##>
@@ -178,16 +181,16 @@ public static void LeftClickAtPoint(int x, int y)
 '@
 Add-Type -TypeDefinition $cSource -ReferencedAssemblies System.Windows.Forms,System.Drawing
 
-$dwidth=([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize).Width
-$dhight=([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize).Height
+#$dwidth=([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize).Width
+#$dhight=([System.Windows.Forms.SystemInformation]::PrimaryMonitorSize).Height
 
 
 ################################# Check Powershell Windows and Get the latest Results ##########################################################
 
 $pscount=(Get-Process Powershell).count
 
-$vcount=(Get-Process video.UI).count
-$vrespond=(Get-Process video.UI).Responding
+$vcount=(Get-Process video.UI -ea SilentlyContinue).count
+$vrespond=(Get-Process video.UI -ea SilentlyContinue).Responding
 
 if ($pscount -eq 1 -or ($vcount -eq 1 -and $vrespond -eq $true)){
 
@@ -212,15 +215,15 @@ do{
 
 start-sleep -s 30
 
-$pshid=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort StartTime |select -first 1).id |?{$_ -notmatch $pshid0}
+$pshid=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort-object StartTime |select-object -first 1).id |where-object{$_ -notmatch $pshid0}
 
 
 start-sleep -s 30
 
-$pshid2=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort StartTime |select -first 1).id |?{$_ -notmatch $pshid0}
+$pshid2=  (Get-Process Powershell -ErrorAction SilentlyContinue |sort-object StartTime |select-object -first 1).id |where-object{$_ -notmatch $pshid0}
 
 
-}until($pshid -ne $null -and $pshid2 -ne $null -and $pshid -eq $pshid2)
+}until($pshid -and $pshid2 -and $pshid -eq $pshid2)
 
 
 }
@@ -445,7 +448,7 @@ exit}  ####### For Prepare use ############3
 
 ################################# Check History Results ####################################################
 
-$csvexist=gci -path "C:\Jumpstart\performance\results\OEM*results.csv"|select -Last 1
+$csvexist=get-childitem -path "C:\Jumpstart\performance\results\OEM*results.csv"|select-object -Last 1
 
 if($winv -ge 22000){
 #$testitems=@("FastStartup","Standby","Edge","BatteryLife")
@@ -481,8 +484,8 @@ foreach($testitem in $testitems){
 $newcsv=$csvexist.fullname 
 $csv_content=import-csv $newcsv -Encoding UTF8
 
-if($testitem -eq "FastStartup"){$item_content=($csv_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."status"}
-else{$item_content=($csv_content|? {$_."assessment" -eq $testitem})."status"}
+if($testitem -eq "FastStartup"){$item_content=($csv_content|where-object{$_."assessment" -eq $testitem -and $_."testcase" -eq "Total"})."status"}
+else{$item_content=($csv_content|where-object{$_."assessment" -eq $testitem})."status"}
 
 
 if ($item_content.Count -gt 0){
@@ -490,18 +493,18 @@ if ($item_content.Count -gt 0){
 if("Pass" -notin $item_content){
 
 if($testitem -eq "FastStartup"){
-$failc=($csv_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."status" -match "baseline"}).count
-$failc2=($csv_content|? {$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."status" -match "fail"}).count
+$failc=($csv_content|where-object{$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."status" -match "baseline"}).count
+$failc2=($csv_content|where-object{$_."assessment" -eq $testitem -and $_."testcase" -eq "Total" -and $_."status" -match "fail"}).count
 
 }
 else{
- $failc=($csv_content|? {$_."assessment" -eq $testitem -and $_."status" -match "baseline"}).count
- $failc2=($csv_content|? {$_."assessment" -eq $testitem -and $_."status" -match "fail"}).count
+ $failc=($csv_content|where-object{$_."assessment" -eq $testitem -and $_."status" -match "baseline"}).count
+ $failc2=($csv_content|where-object{$_."assessment" -eq $testitem -and $_."status" -match "fail"}).count
  }
  
  if( ($testitem -ne "BatteryLife" -and $failc -lt 5) -or ($testitem -eq "BatteryLife" -and $failc -lt 3)){
 
- echo "$testitem,$failc"
+write-output  "$testitem,$failc"
  $runflag=$testitem
  
 set-content -path "C:\Jumpstart\batch\runflag.txt" -value $runflag
@@ -511,7 +514,7 @@ break
 ### Fail Maximun 2 ###########
  if($failc2 -gt 0 -and $failc2 -lt 2){
 
- echo "$testitem,$failc"
+ write-output "$testitem,$failc"
  $runflag=$testitem
  
 set-content -path "C:\Jumpstart\batch\runflag.txt" -value $runflag
@@ -542,12 +545,12 @@ break
 
  remove-item C:\Jumpstart\batch\wait_pswindow.txt -Force
  Get-Process -id $pshid2 | Set-WindowState -State MINIMIZE
- [System.Windows.Forms.MessageBox]::Show($this,"OEM Test Complete!")
+ #[System.Windows.Forms.MessageBox]::Show($this,"OEM Test Complete!")
 
    ######  Report generate #####
  invoke-expression -Command C:\Jumpstart\batch\get_report.ps1
 
-       }
+  }
 
 
        
@@ -561,7 +564,7 @@ $testgo= get-content -path "C:\Jumpstart\batch\runflag.txt"
 $rcdid= (Get-Process RcdSettings).id
 start-sleep -seconds 2
 
-if($rcdid -ne $null){
+if($rcdid){
 
  [Microsoft.VisualBasic.interaction]::AppActivate($rcdid)|out-null
   Get-Process -id $rcdid | Set-WindowState -State MAXIMIZE
@@ -871,7 +874,7 @@ do{
 start-sleep -s 5
 $bid= (get-process energy*).id
 
-}until($bid -ne $Null)
+}until($bid)
 
  start-sleep -s 10
  [Microsoft.VisualBasic.interaction]::AppActivate($bid)|out-null
